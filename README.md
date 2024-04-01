@@ -3,7 +3,7 @@ This project is made on Django framework. This project works with frontend repos
 Aim of this project is to **quickly** optimize the resume based on the provided job description so that it can pass through ATS test with the help of AI. 
 
 ## Frontend
-Frontend for this project is available at [RESUME OPTIMIZER FRONTEND]().
+Frontend for this project is available at [RESUME OPTIMIZER FRONTEND](https://github.com/rishabbahal9/Resume-optimizer-frontend.git).
 
 ## Running the application
 
