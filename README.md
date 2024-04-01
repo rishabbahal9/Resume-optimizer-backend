@@ -1,5 +1,5 @@
 # RESUME OPTIMIZER BACKEND
-This project is made on Django framework. This project works with frontend repository [RESUME OPTIMIZER FRONTEND](). 
+This project is made on Django framework. This project works with frontend repository [RESUME OPTIMIZER FRONTEND](https://github.com/rishabbahal9/Resume-optimizer-frontend.git). 
 Aim of this project is to **quickly** optimize the resume based on the provided job description so that it can pass through ATS test with the help of AI. 
 
 ## Frontend
