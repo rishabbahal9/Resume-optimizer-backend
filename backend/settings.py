@@ -12,6 +12,19 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 
 from pathlib import Path
 
+from pathlib import Path
+import environ
+env = environ.Env()
+# reading .env file
+environ.Env.read_env()
+
+# env variables
+APP_ENV = env("APP_ENV")
+GOOGLE_EMAIL_PASSWORD = env("GOOGLE_EMAIL_PASSWORD")
+FROM_EMAIL = env("FROM_EMAIL")
+FRONTEND_LINK = env("FRONTEND_LINK")
+TEST_RECEPIENT = env("TEST_RECEPIENT")
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -37,10 +50,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'corsheaders',
     'users'
 ]
 
@@ -124,6 +137,17 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+
+# Email configuration
+
+DEFAULT_FROM_EMAIL = FROM_EMAIL
+SERVER_EMAIL = FROM_EMAIL
+EMAIL_USE_TLS = True
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = FROM_EMAIL
+EMAIL_HOST_PASSWORD = GOOGLE_EMAIL_PASSWORD
 
 
 # Static files (CSS, JavaScript, Images)

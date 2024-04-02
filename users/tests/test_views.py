@@ -1,5 +1,7 @@
+from users.models import User
 from .test_setup import TestSetUp
 import base64
+from django.contrib.auth.tokens import default_token_generator
 """
 > For debugging:
 
@@ -19,7 +21,7 @@ class RegisterViews(TestSetUp):
     def test_user_cannot_register_with_no_data(self):
         res = self.client.post(self.register_url)
         self.assertEqual(res.status_code, 400)
-        self.assertEqual(res.data, {
+        self.assertEqual(res.json(), {
             "username": [
                 "This field is required."
             ],
@@ -33,6 +35,15 @@ class RegisterViews(TestSetUp):
                 "This field is required."
             ],
             "password": [
+                "This field is required."
+            ],
+            "gender": [
+                "This field is required."
+            ],
+            "date_of_birth": [
+                "This field is required."
+            ],
+            "profile_picture": [
                 "This field is required."
             ]
         })
@@ -53,6 +64,7 @@ class RegisterViews(TestSetUp):
         # Adding password in response data and sorting it again
         response_data_dict = sorted(res.data.items())
         response_data_dict.append(("password", "test123"))
+        user_data_dict.append(("verified", False))
         response_data_dict = sorted(response_data_dict)
         self.assertEqual(user_data_dict, response_data_dict)
 
@@ -164,6 +176,12 @@ class UserDataView(TestSetUp):
         self.assertEqual(res.data['last_name'], self.user_data['last_name'])
         self.assertEqual(res.data['username'], self.user_data['username'])
         self.assertEqual(res.data['email'], self.user_data['email'])
+        self.assertEqual(res.data['gender'], self.user_data['gender'])
+        self.assertEqual(res.data['date_of_birth'],
+                         self.user_data['date_of_birth'])
+        self.assertEqual(res.data['profile_picture'],
+                         self.user_data['profile_picture'])
+        self.assertEqual(res.data['verified'], False)
 
     def test_not_get_user_details_from_invalid_access_token(self):
         auth_headers = {
@@ -240,11 +258,12 @@ class LogoutView(TestSetUp):
         # Try getting access token from refresh token since it shoul be blacklisted
         res_refresh = self.client.post(
             self.getNewAccessToken_url, {"refresh": refresh_token}, format="json")
-        
+
         self.assertEqual(res_refresh.status_code, 401)
         self.assertEqual(res_refresh.data['detail'].code, 'token_not_valid')
-        self.assertEqual(res_refresh.data['detail'].title(), 'Token Is Blacklisted')
-    
+        self.assertEqual(
+            res_refresh.data['detail'].title(), 'Token Is Blacklisted')
+
     def test_invalid_refresh_token_logout(self):
         # First register the email and password
         self.client.post(
@@ -285,4 +304,94 @@ class LogoutView(TestSetUp):
             self.logout_url, {"refresh": refresh_token+'making_token_invalid'}, format="json")
         # Check for status
         self.assertEqual(res.status_code, 401)
-        
+
+
+class TestForgotPasswordView(TestSetUp):
+    """Testing forgot-password endpoint"""
+
+    def test_invalid_email(self):
+        """Sending invalid email"""
+        res = self.client.post(self.forgot_password_url, {
+            "email": self.user_data["email"]}, format="json")
+        self.assertEqual(res.status_code, 501)
+        self.assertEqual(
+            res.data, {'success': False, 'message': 'email not registered'})
+
+    def test_valid_unregistered_email(self):
+        """Sending unregistered email"""
+        res = self.client.post(self.forgot_password_url, {
+            "email": self.user_data["email"]}, format="json")
+        self.assertEqual(res.status_code, 501)
+        self.assertEqual(
+            res.data, {'success': False, 'message': 'email not registered'})
+
+    def test_valid_registered_email(self):
+        """Sending registered email"""
+        self.client.post(
+            self.register_url, self.user_data, format="json")
+        res = self.client.post(self.forgot_password_url, {
+            "email": self.user_data["email"]}, format="json")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data, {'success': True})
+
+
+class VerifyForgotPasswordTokenView(TestSetUp):
+    """Testing Forgot Password token endpoint"""
+
+    def test_invalid_forgot_password_token(self):
+        """Sending invalid token"""
+        res = self.client.post(self.verify_forgot_password_token_url, {
+                               'token': 'invalid-token', 'uid': 1}, format="json")
+        self.assertEqual(res.status_code, 401)
+        self.assertEqual(res.data, {'valid': False})
+
+    def test_valid_forgot_password_token(self):
+        """Sending valid token"""
+        # Registering user
+        user_obj = self.client.post(
+            self.register_url, self.user_data, format="json")
+
+        # generating Forgot password token
+        user_object = User.objects.filter(id=user_obj.data["id"]).get()
+        token = default_token_generator.make_token(user_object)
+
+        # Sending request to verify token
+        res = self.client.post(self.verify_forgot_password_token_url, {
+                               'token': token, 'uid': user_obj.data["id"]}, format="json")
+        # Verifying response
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(
+            res.data, {'valid': True, 'email': user_obj.data['email']})
+
+
+class ResetForgotPasswordView(TestSetUp):
+    """Testing reset forgot password endpoint"""
+
+    def test_sending_valid_password_reset_token_and_uid(self):
+        test_password = "thisIsATestPassword100"
+        # Registering user
+        user_obj = self.client.post(
+            self.register_url, self.user_data, format="json")
+
+        # generating Forgot password token
+        user_object = User.objects.filter(id=user_obj.data["id"]).get()
+        token = default_token_generator.make_token(user_object)
+
+        # Sending request to reset password
+        res = self.client.post(self.reset_forgot_password_url, {
+                               'token': token, 'uid': user_obj.data["id"], 'newPassword': test_password}, format="json")
+
+        # Testing response
+        self.assertEqual(res.status_code, 202)
+        self.assertEqual(
+            res.data, {'success': True})
+
+        # Testing if login works with new password
+        response = self.client.post(self.login_url, {
+            "email": user_obj.data['email'], "password": test_password}, format="json")
+        self.assertEqual(response.status_code, 200)
+        response_dict = sorted(response.data.items())
+        self.assertEqual(response_dict[0][0], 'access')
+        self.assertEqual(len(response_dict[0][1]), 228)
+        self.assertEqual(response_dict[1][0], 'refresh')
+        self.assertEqual(len(response_dict[1][1]), 229)

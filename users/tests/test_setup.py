@@ -16,12 +16,19 @@ class TestSetUp(APITestCase):
         self.getUserData_url = reverse('user')
         self.testAuthenticated_url = reverse('test')
         self.logout_url = reverse('logout')
+        self.forgot_password_url = reverse('forgot_password')
+        self.verify_forgot_password_token_url = reverse('verify_forgot_password_token')
+        self.reset_forgot_password_url = reverse('reset_forgot_password')
         self.user_data = {
             'email': 'test@test.com',
             'username': 'test',
             'first_name': 'firstname',
             'last_name': 'lastname',
-            'password': 'test123'
+            'password': 'test123',
+            'gender': 'male',
+            'date_of_birth': '09-01-1996',
+            'profile_picture': 'ss'
+
         }
         return super().setUp()
 
